@@ -6,13 +6,9 @@ github：https://github.com/scarsty/kys-cpp
 
 码云（不定期同步）：https://gitee.com/scarsty/kys-cpp
 
-这是一个以SDL2为基础实现的2D游戏框架。
-
-基本按照当代游戏引擎的思路实现，但是没有使用回调，因为回调会增加初学者的使用难度。
-
-同时相当于提供了一个使用该框架制作DOS游戏《金庸群侠传》移植版的范例。
-
 资源文件：<http://pan.baidu.com/s/1sl2X9wD>
+
+这是一个以SDL2为基础实现的2D游戏框架，同时相当于提供了一个使用该框架制作DOS游戏《金庸群侠传》移植版的范例。
 
 Windows下可以使用Visual Studio编译，其他系统下可以在src目录使用CMake生成Makefile，使用Clang或者GCC编译。
 
@@ -28,7 +24,7 @@ Save中对所有数据进行了封装，可以较为方便地调用。
 
 TextureManger是一个纹理管理器，因为《金庸群侠传》的贴图是含偏移设置的，故有些特殊的地方。
 
-Audio是音频类，基于Bass，可以播放mid，mp3，wav等。
+Audio是音频类，基于Bass，可以播放mid、mp3、wav等格式。
 
 ### Element
 
@@ -49,6 +45,32 @@ run过程会返回一个函数值，可以利用进行一些判断，例如菜�
 部分节点使用了单例，这些节点请留给程序运行结束自动销毁。
 
 请不要让子节点出现递归包含，这样会迅速消耗掉所有资源。
+
+### 注意事项
+
+本工程刻意避免了一些C++新特性的使用，例如智能指针、内存管理等，而采用自己管理内存的方式。
+
+通常来说，大部分游戏引擎都需要全局标记和回调来控制剧情的执行，本框架采用Element的run设计，使事件以阻塞的模式顺序执行，同时绘图仍是无阻塞执行的。
+
+更多分析见<https://www.dawuxia.net/thread-1039649-1-1.html>。
+
+## abc工程以及资源的保存
+
+abc工程用来转换之前的数据。
+
+其中主要的功能是将存档的R部分扩展为原来的二倍。即所有的16位整数转为32位整数，表示范围从32767扩大到2^31-1，足够通常的数值使用。同时，原有的字串也扩展为之前的二倍长度，例如原来人物的名字有5个中文字符长度，实际上最多只能使用4个字，转换之后则可以使用9个字（并不是推荐你用9个字）。转换之后的文件名变为r?.grp32。
+
+文件的文本编码，仅有初始存档为cp950（BIG5），这是向下兼容的需要，但是内部会使用cp936（GBK），存档被保存后也会转为cp936。
+
+游戏的资源文件是以单个图片的形式放在resource的各个目录中的，每张图的偏移保存在index.ka中，格式为每张图两个16位整数，连续存放。目前没有设计打包格式。
+
+战斗贴图文件中，每个人的帧数，之前在hugebase（水浒）框架中使用fightframe.ka保存，现改用fightframe.txt保存。格式为动作索引（0~4），每方向数量。未写则视为0。
+
+之前游戏使用的列表文件只保留了升级经验列表和离队列表，改用txt格式。
+
+并非所有的文档都转为32位，这有一部分是为了节省资源的需要。
+
+以上提到的数据，除了文本文件外均可以用真正的强强的新版upedit修改（该修改器不完善）。  
 
 ## 使用到的其他开发库
 
@@ -80,21 +102,51 @@ fribidi <https://www.fribidi.org/>
 
 ini Reader <https://github.com/benhoyt/inih>
 
-tinypot <https://github.com/scarsty/tinypot>
+OpenCC <https://github.com/BYVoid/OpenCC>
 
-common <https://github.com/scarsty/common>
+Fast C++ CSV Parser: <https://github.com/ben-strasser/fast-cpp-csv-parser>
+
+asio (from boost)
+
+PicoSHA2: <https://github.com/okdshin/PicoSHA2>
+
+hanz2piny <https://github.com/yangyangwithgnu/hanz2piny>
 
 除BASS和BASSMIDI为闭源，但可以免费用于非商业项目之外，其他均为开源工程。
 
-部分库和对应的头文件可以从<https://github.com/scarsty/local-lib>取得。
+汉字转拼音库直接将源码集成进了工程。
 
-### common
+### common和local
 
-common目录包含了一些常用的公共功能，被多个工程使用。代码请从<https://github.com/scarsty/common>下载并置于适合的位置，或者使用脚本get-common.sh获取。
+common <https://github.com/scarsty/common>
+
+common包含了一些常用的公共功能，是作者所写的一个通用功能集合，被多个工程使用。
+
+前面提到的开源库大部分可以从<https://github.com/scarsty/lib-collection>取得头文件和导入库。此工程收集了一些Linux下常见，但是Windows下经常不能直接使用的库，在Windows下编译时通常需要将其保存在local目录中，有些库也可以用vcpkg或者msys2来安装，请自行选择处理。在Linux下编译时则应优先考虑使用系统自带的库。
+
+PicoSHA2和CSV库仅需要头文件，请注意将它们复制到适合的位置。
+
+可以用以下命令
+
+```shell
+git clone https://github.com/scarsty/common common
+git clone https://github.com/scarsty/lib-collection local
+
+
+mkdir include
+cp ./local/include/picosha2.h ./include
+cp ./local/include/csv.h ./include
+```
+
+或者get-submodule.sh。
 
 ### tinypot
 
-游戏中使用这个库进行视频的播放，如果难以处理，可以将预处理定义宏中的\_TINYPOT删除。
+tinypot <https://github.com/scarsty/tinypot>
+
+这是作者编写的一个视频播放器，游戏中将其编译为动态库并用于进行视频的播放。
+
+如果难以处理，可以将预处理定义宏中的\_TINYPOT删除。
 
 ## 授权
 
@@ -117,6 +169,8 @@ If the codes are used in KYS related games, the game is strictly prohibited for 
 A title "Powered by www.dawuxia.net" is advised to be displayed on the welcome screen.
 
 ## 运行截图
+
+第一张图中武器的属性显示有错误，代码中已修正。
 
 <img src='https://pic2.zhimg.com/80/v2-fcac09adf861ee474477bbe91bf0fbab_hd.jpg' />
 
